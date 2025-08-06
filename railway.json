@@ -1,0 +1,36 @@
+{
+    "$schema": "https://railway.app/railway.schema.json",
+    "name": "Webhook Catcher",
+    "description": "Developer-friendly webhook debugging tool with real-time capture, replay, and multi-service architecture support",
+    "tags": ["webhook", "debugging", "fastapi", "htmx", "sqlite", "devtools"],
+    "build": {
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "Dockerfile"
+    },
+    "deploy": {
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10,
+        "healthcheckPath": "/healthz",
+        "healthcheckTimeout": 300
+    },
+    "envs": {
+        "FORWARD_WEBHOOK_URL": {
+            "description": "Optional: Forward webhooks to another service (bot, processor, etc.)",
+            "value": ""
+        },
+        "FORWARD_WEBHOOK_TOKEN": {
+            "description": "Optional: Authentication token for webhook forwarding security",
+            "value": ""
+        },
+        "ADMIN_TOKEN": {
+            "description": "Admin token for sensitive operations (clear logs, replay webhooks). Leave empty to disable protection.",
+            "value": ""
+        }
+    },
+    "volumes": [
+        {
+            "name": "webhook-storage",
+            "mountPath": "/app"
+        }
+    ]
+}

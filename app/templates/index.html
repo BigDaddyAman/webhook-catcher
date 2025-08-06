@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <title>Webhook Catcher</title>
+    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/relativeTime.js"></script>
+    <style>
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .dark * {
+            text-shadow: none !important;
+            -webkit-text-stroke: none !important;
+            text-stroke: none !important;
+        }
+
+        .dark { 
+            background-color: #111827 !important; 
+            color: #ffffff !important; 
+        }
+        .dark .bg-white { 
+            background-color: #1f2937 !important; 
+            color: #ffffff !important;
+        }
+        .dark .bg-gray-100 { 
+            background-color: #374151 !important; 
+            color: #ffffff !important;
+        }
+        .dark .bg-gray-50 { 
+            background-color: #374151 !important; 
+            color: #ffffff !important;
+        }
+        .dark .text-gray-500 { 
+            color: #9ca3af !important; 
+        }
+        .dark .text-gray-600 { 
+            color: #d1d5db !important; 
+        }
+        .dark .text-gray-800 { 
+            color: #ffffff !important; 
+        }
+        .dark .border { 
+            border-color: #374151 !important; 
+        }
+        .dark .border-gray-200 { 
+            border-color: #374151 !important; 
+        }
+        .dark code.bg-gray-100,
+        .dark code { 
+            background-color: #374151 !important; 
+            color: #ffffff !important;
+            text-shadow: none !important;
+        }
+        .dark input, .dark textarea { 
+            background-color: #374151 !important; 
+            color: #ffffff !important; 
+            border-color: #4b5563 !important;
+            text-shadow: none !important;
+        }
+        .dark input::placeholder, .dark textarea::placeholder {
+            color: #9ca3af !important;
+        }
+        .dark .highlight { 
+            background-color: #92400e !important; 
+            color: white !important; 
+        }
+        .dark pre { 
+            background-color: #1a1a1a !important; 
+        }
+        .dark pre code {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+            text-shadow: none !important;
+        }
+        .dark .sticky-header { 
+            background-color: rgba(31, 41, 55, 0.95) !important; 
+            backdrop-filter: blur(8px);
+            color: #ffffff !important;
+        }
+
+        .dark button {
+            text-shadow: none !important;
+        }
+
+        .dark h1,
+        .dark h2,
+        .dark h3,
+        .dark h4,
+        .dark h5,
+        .dark h6 {
+            color: #ffffff !important;
+            text-shadow: none !important;
+        }
+
+        .dark a {
+            text-shadow: none !important;
+        }
+        
+        .fade-out { opacity: 0; transition: opacity 0.2s ease-in-out; }
+        .sticky-header { 
+            position: sticky; 
+            top: 0; 
+            z-index: 10; 
+            padding: 1rem; 
+            border-bottom: 1px solid #e5e7eb;
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+        }
+        .highlight { background-color: #fef08a; }
+        pre { white-space: pre-wrap; word-break: break-word; }
+
+        html.dark, 
+        html.dark body { 
+            background-color: #111827 !important; 
+            min-height: 100vh;
+        }
+        
+        html, 
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dark .bg-white { background-color: #1f2937 !important; }
+        .dark .bg-gray-100 { background-color: #111827 !important; }
+        .dark code { background-color: #1f2937 !important; color: #e5e7eb !important; }
+        .dark input, .dark textarea { 
+            background-color: #374151 !important; 
+            color: #e5e7eb !important; 
+            border-color: #4b5563 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Admin Authentication Required</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">This operation requires admin privileges. Please enter your admin token:</p>
+            <input 
+                type="password" 
+                id="admin-token-input" 
+                placeholder="Enter admin token..."
+                class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
+            <div class="flex gap-2 justify-end">
+                <button 
+                    onclick="cancelAdminModal()"
+                    class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition">
+                    Cancel
+                </button>
+                <button 
+                    onclick="submitAdminToken()"
+                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sticky-header">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <h1 class="text-4xl font-bold text-blue-600">Webhook Catcher 🚀</h1>
+                <a href="/logs/view" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">📋 Logs</a>
+                <span id="admin-status" class="px-2 py-1 text-xs rounded hidden">
+                    🔒 Admin Protected
+                </span>
+            </div>
+            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg transition-colors flex items-center gap-2">
+                <span class="dark:hidden">🌙</span>
+                <span class="hidden dark:inline">☀️</span>
+                <span class="dark:hidden">Dark</span>
+                <span class="hidden dark:inline">Light</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-8">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4">🚀 Webhook Catcher Status</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Webhook URL</div>
+                    <code class="text-sm bg-gray-100 dark:bg-gray-600 p-1 rounded block truncate" id="webhook-url-display"></code>
+                </div>
+                <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div class="text-sm text-gray-600 dark:text-gray-300 mb-1">Total Received</div>
+                    <span id="total-count" class="text-lg font-bold text-blue-600 dark:text-blue-400">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4">📥 Your Webhook URL</h2>
+            <div class="flex items-center gap-2">
+                <code class="bg-gray-100 dark:bg-gray-700 p-3 rounded flex-1 text-sm" id="webhook-url"></code>
+                <button onclick="copyWebhookUrl()" class="px-4 py-3 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                    📋 Copy
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+            <details class="group">
+                <summary class="text-xl font-semibold mb-4 cursor-pointer hover:text-blue-600 transition-colors">
+                    📚 Quick Start Guide
+                </summary>
+                <div class="mt-4 space-y-4">
+                    <h3 class="text-lg font-medium">Test with cURL</h3>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
+                            <h4 class="text-sm font-medium mb-2">PowerShell/Terminal:</h4>
+                            <pre class="text-sm overflow-x-auto"><code>curl -X POST <span id="curl-url-powershell"></span>/webhook -H "Content-Type: application/json" -d "{\"event\": \"test\", \"message\": \"Hello World!\"}"</code></pre>
+                            <button onclick="copyCurlCommand('powershell')" class="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                📋 Copy Command
+                            </button>
+                        </div>
+                    </div>
+
+                    <h3 class="text-lg font-medium mt-6">Common Use Cases</h3>
+                    <ul class="list-disc pl-5 space-y-2 text-gray-700 dark:text-gray-300">
+                        <li>GitHub repository events and CI/CD pipelines</li>
+                        <li>Discord/Slack bot development and testing</li>
+                        <li>Payment processing (Stripe, PayPal) notifications</li>
+                        <li>IoT device updates and monitoring</li>
+                    </ul>
+
+                    <h3 class="text-lg font-medium mt-6">How to Use</h3>
+                    <ol class="list-decimal pl-5 space-y-2 text-gray-700 dark:text-gray-300">
+                        <li>Copy your webhook URL from above</li>
+                        <li>Add it to your service (GitHub, Discord, Stripe, etc.)</li>
+                        <li>Send webhooks and view them in real-time below</li>
+                        <li>Use search, replay, or export features as needed</li>
+                    </ol>
+                </div>
+            </details>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4">🧪 Test Your Setup</h2>
+            <div class="mb-4">
+                <textarea 
+                    id="test-payload" 
+                    class="w-full p-3 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    rows="4"
+                    placeholder='{"event": "test", "message": "Hello World!", "timestamp": "2025-01-31T12:00:00Z"}'
+                ></textarea>
+            </div>
+            <button 
+                onclick="sendTestWebhook()"
+                class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
+                🚀 Send Test Webhook
+            </button>
+        </div>
+
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                <h2 class="text-xl font-semibold">📋 Webhook Logs</h2>
+                <input 
+                    type="search" 
+                    name="search" 
+                    placeholder="🔍 Search logs..." 
+                    class="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    hx-get="/logs"
+                    hx-trigger="keyup changed delay:500ms"
+                    hx-target="#logs">
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="/export?format=json" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                    📥 JSON
+                </a>
+                <a href="/export?format=csv" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                    📥 CSV
+                </a>
+                <button 
+                    onclick="clearLogsWithModal()"
+                    class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+                    🗑️ Clear
+                </button>
+            </div>
+        </div>
+
+        <div class="log-count text-sm text-gray-600 dark:text-gray-400 mb-2">Loading logs...</div>
+        
+        <div id="logs" 
+             class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
+             hx-get="/logs"
+             hx-trigger="load, every 5s">
+            <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                <div class="animate-spin h-8 w-8 mx-auto mb-4">
+                    <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <p>Loading webhooks...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        dayjs.extend(window.dayjs_plugin_relativeTime);
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const webhookUrl = document.getElementById('webhook-url');
+            const curlUrl = document.getElementById('curl-url');
+            if (webhookUrl) webhookUrl.textContent = window.location.origin + '/webhook';
+            if (curlUrl) curlUrl.textContent = window.location.origin;
+
+            const baseUrl = window.location.origin;
+            ['unix', 'windows', 'powershell'].forEach(type => {
+                const el = document.getElementById(`curl-url-${type}`);
+                if (el) el.textContent = baseUrl;
+            });
+
+            const webhookUrlDisplay = document.getElementById('webhook-url-display');
+            if (webhookUrlDisplay) {
+                webhookUrlDisplay.textContent = window.location.origin + '/webhook';
+            }
+            
+            loadConfigStatus();
+            
+            setInterval(loadConfigStatus, 30000);
+        });
+
+        function copyWebhookUrl() {
+            const url = window.location.origin + '/webhook';
+            navigator.clipboard.writeText(url);
+            const btn = event.target;
+            btn.innerText = '✅ Copied!';
+            setTimeout(() => btn.innerText = '📋 Copy', 2000);
+        }
+
+        function formatJSON(str) {
+            try {
+                return JSON.stringify(JSON.parse(str), null, 2);
+            } catch {
+                return str;
+            }
+        }
+
+        async function executeAdminOperation(operation, operationName) {
+            try {
+                let result = await operation();
+                return result;
+            } catch (error) {
+                console.log(`Operation ${operationName} failed:`, error);
+                
+                const is401 = error.status === 401 || 
+                             (error.response && error.response.status === 401) ||
+                             (error.message && error.message.includes('401')) ||
+                             (error.message && error.message.includes('Admin token required'));
+                
+                if (is401) {
+                    console.log('401 detected, showing admin modal');
+                    return new Promise((resolve, reject) => {
+                        pendingAdminOperation = async () => {
+                            try {
+                                console.log('Retrying operation with token:', currentAdminToken ? 'provided' : 'missing');
+                                const result = await operation(currentAdminToken);
+                                resolve(result);
+                            } catch (retryError) {
+                                console.log('Retry failed:', retryError);
+                                const isRetry401 = retryError.status === 401 || 
+                                                 (retryError.response && retryError.response.status === 401) ||
+                                                 (retryError.message && retryError.message.includes('401')) ||
+                                                 (retryError.message && retryError.message.includes('Admin token required'));
+                                
+                                if (isRetry401) {
+                                    alert('❌ Invalid admin token. Please try again.');
+                                    currentAdminToken = null;
+                                    showAdminModal(pendingAdminOperation);
+                                } else {
+                                    alert(`❌ ${operationName} failed: ${retryError.message}`);
+                                    reject(retryError);
+                                }
+                            }
+                        };
+                        showAdminModal(pendingAdminOperation);
+                    });
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        async function replayWebhook(btn) {
+            if (!btn) return;
+            
+            const targetUrl = btn.previousElementSibling?.value?.trim();
+            const webhookId = btn.closest('.webhook-item')?.dataset?.id;
+            
+            if (!targetUrl) {
+                alert('Please enter a target URL');
+                return;
+            }
+            
+            if (!webhookId) {
+                console.error('No webhook ID found');
+                return;
+            }
+
+            console.log(`Attempting to replay webhook ${webhookId} to ${targetUrl}`);
+            
+            btn.innerHTML = '⏳ Sending...';
+            btn.disabled = true;
+
+            try {
+                await executeAdminOperation(async (token) => {
+                    console.log('Executing replay operation, token provided:', !!token);
+                    
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    if (token) {
+                        headers['X-Admin-Token'] = token;
+                        console.log('Added admin token to headers');
+                    }
+                    
+                    const response = await fetch(`/replay/${webhookId}?target_url=${encodeURIComponent(targetUrl)}`, {
+                        method: 'POST',
+                        headers: headers
+                    });
+                    
+                    console.log('Replay response status:', response.status);
+                    
+                    if (!response.ok) {
+                        let errorMessage = `HTTP ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.detail || errorMessage;
+                        } catch (e) {
+                            errorMessage = response.statusText || errorMessage;
+                        }
+                        
+                        const err = new Error(errorMessage);
+                        err.status = response.status;
+                        err.response = response;
+                        
+                        console.log('Throwing error with status:', err.status);
+                        throw err;
+                    }
+                    
+                    return await response.json();
+                }, 'Replay webhook');
+                
+                console.log('Replay successful');
+                btn.innerHTML = '✅ Sent!';
+                btn.className = 'px-4 py-2 bg-green-500 text-white rounded';
+                
+            } catch (error) {
+                console.error('Final replay error:', error);
+                if (!error.status || error.status !== 401) {
+                    btn.innerHTML = '❌ Failed!';
+                    btn.className = 'px-4 py-2 bg-red-500 text-white rounded';
+                    alert(`Replay failed: ${error.message}`);
+                }
+            }
+
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Replay';
+                btn.className = 'px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition';
+            }, 2000);
+        }
+
+        async function sendTestWebhook() {
+            const textarea = document.getElementById('test-payload');
+            let payload = textarea.value.trim();
+            
+            try {
+                if (!payload) {
+                    payload = '{}';
+                }
+                
+                JSON.parse(payload);
+                
+                const response = await fetch('/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: payload
+                });
+                
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Failed to send webhook');
+                }
+                
+                alert(`✅ Test webhook sent!\nStatus: ${result.response_status}\nURL: ${result.url}`);
+                
+            } catch (error) {
+                if (error instanceof SyntaxError) {
+                    alert('❌ Invalid JSON format. Example: {"event": "test", "message": "Hello"}');
+                } else {
+                    alert(`❌ ${error.message || 'Failed to send test webhook'}`);
+                }
+                console.error(error);
+            }
+        }
+
+        function highlightSearch(text, search) {
+            if (!search) return text;
+            const regex = new RegExp(`(${search})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function formatRelativeTime(timestamp) {
+            return dayjs(timestamp).fromNow();
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark);
+            
+            const currentScroll = window.scrollY;
+            requestAnimationFrame(() => window.scrollTo(0, currentScroll));
+        }
+
+        async function loadConfigStatus() {
+            try {
+                const response = await fetch('/config');
+                const config = await response.json();
+                
+                document.getElementById('total-count').textContent = config.total_webhooks;
+                
+                const adminStatus = document.getElementById('admin-status');
+                if (config.admin_protection_enabled) {
+                    adminStatus.classList.remove('hidden');
+                    adminStatus.classList.add('bg-yellow-100', 'text-yellow-800', 'dark:bg-yellow-900', 'dark:text-yellow-200');
+                } else {
+                    adminStatus.classList.add('hidden');
+                }
+                
+            } catch (error) {
+                console.error('Failed to load config:', error);
+                document.getElementById('total-count').textContent = '0';
+            }
+        }
+
+        if (localStorage.getItem('darkMode') === null) {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('darkMode', 'true');
+            }
+        } else if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+        }
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (localStorage.getItem('darkMode') === null) {
+                document.documentElement.classList.toggle('dark', e.matches);
+            }
+        });
+
+        function getDefaultReplayUrl() {
+            return `${window.location.origin}/webhook`;
+        }
+
+        document.addEventListener('htmx:afterSwap', function(event) {
+            const target = event.detail.target;
+            if (!target) return;
+
+            const logCount = document.querySelector('.log-count');
+            const webhookItems = target.querySelectorAll('.webhook-item');
+            if (logCount && webhookItems) {
+                const total = webhookItems.length;
+                logCount.textContent = `Showing ${total} log${total !== 1 ? 's' : ''}`;
+            }
+
+            target.querySelectorAll('input[type="url"]').forEach(input => {
+                if (!input.value) {
+                    input.value = window.location.origin + '/webhook';
+                }
+            });
+
+            const searchTerm = document.querySelector('input[name="search"]')?.value;
+            target.querySelectorAll('pre code').forEach((el) => {
+                try {
+                    const formatted = JSON.stringify(JSON.parse(el.textContent), null, 2);
+                    el.textContent = formatted;
+                    if (searchTerm) {
+                        el.innerHTML = highlightSearch(formatted, searchTerm);
+                    }
+                    Prism.highlightElement(el);
+                } catch (e) {
+                    console.error('Code formatting error:', e);
+                }
+            });
+        });
+
+        function copyCurlCommand(type) {
+            const baseUrl = window.location.origin;
+            const curlCmd = `curl -X POST ${baseUrl}/webhook -H "Content-Type: application/json" -d "{\\"event\\": \\"test\\", \\"message\\": \\"Hello World\\"}"`;
+            
+            navigator.clipboard.writeText(curlCmd);
+            const btn = event.target;
+            btn.innerText = '✅ Copied!';
+            setTimeout(() => btn.innerText = '📋 Copy Command', 2000);
+        }
+
+        let currentAdminToken = null;
+        let pendingAdminOperation = null;
+
+        function showAdminModal(operation) {
+            pendingAdminOperation = operation;
+            document.getElementById('admin-modal').classList.remove('hidden');
+            document.getElementById('admin-token-input').focus();
+        }
+
+        function cancelAdminModal() {
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.getElementById('admin-token-input').value = '';
+            pendingAdminOperation = null;
+            currentAdminToken = null;
+        }
+
+        function submitAdminToken() {
+            const token = document.getElementById('admin-token-input').value.trim();
+            if (!token) {
+                alert('Please enter a token');
+                return;
+            }
+            
+            currentAdminToken = token;
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.getElementById('admin-token-input').value = '';
+            
+            if (pendingAdminOperation) {
+                pendingAdminOperation();
+                pendingAdminOperation = null;
+            }
+        }
+
+        async function clearLogsWithModal() {
+            const confirmed = confirm('Are you sure you want to clear all webhook logs? This action cannot be undone.');
+            if (!confirmed) return;
+            
+            try {
+                console.log('Attempting to clear logs');
+                
+                const response = await fetch('/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                console.log('Clear response status:', response.status);
+                
+                if (response.status === 401) {
+                    console.log('Got 401, showing admin modal for clear');
+                    showAdminModal(async () => {
+                        console.log('Retrying clear with admin token');
+                        try {
+                            const retryResponse = await fetch('/clear', {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'X-Admin-Token': currentAdminToken 
+                                }
+                            });
+                            
+                            if (retryResponse.ok) {
+                                alert('✅ Logs cleared successfully!');
+                                document.getElementById('logs').innerHTML = `
+                                    <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                                        <div class="text-6xl mb-4">📭</div>
+                                        <h3 class="text-xl font-bold mb-2">No webhooks yet</h3>
+                                        <p>Send a test webhook to get started!</p>
+                                    </div>
+                                `;
+                                loadConfigStatus();
+                            } else {
+                                alert('❌ Clear failed - invalid admin token');
+                            }
+                        } catch (retryError) {
+                            alert('❌ Clear failed: ' + retryError.message);
+                        }
+                    });
+                    return; 
+                }
+                
+                if (response.ok) {
+                    alert('✅ Logs cleared successfully!');
+                    document.getElementById('logs').innerHTML = `
+                        <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                            <div class="text-6xl mb-4">📭</div>
+                            <h3 class="text-xl font-bold mb-2">No webhooks yet</h3>
+                            <p>Send a test webhook to get started!</p>
+                        </div>
+                    `;
+                    loadConfigStatus();
+                } else {
+                    alert('❌ Clear failed: HTTP ' + response.status);
+                }
+                
+            } catch (error) {
+                console.error('Clear error:', error);
+                alert('❌ Network error: ' + error.message);
+            }
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !document.getElementById('admin-modal').classList.contains('hidden')) {
+                cancelAdminModal();
+            }
+            if (e.key === 'Enter' && !document.getElementById('admin-modal').classList.contains('hidden')) {
+                submitAdminToken();
+            }
+        });
+
+    </script>
+</body>
+</html>

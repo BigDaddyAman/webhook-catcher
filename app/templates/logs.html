@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <title>Webhook Logs - Webhook Catcher</title>
+    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/relativeTime.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.css" rel="stylesheet">
+    <style>
+        html.dark, 
+        html.dark body { 
+            background-color: #111827 !important; 
+            min-height: 100vh;
+        }
+        
+        html, 
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .dark * {
+            text-shadow: none !important;
+            -webkit-text-stroke: none !important;
+            text-stroke: none !important;
+        }
+        
+        .dark { 
+            background-color: #111827 !important; 
+            color: #ffffff !important; 
+        }
+        .dark .bg-white { 
+            background-color: #1f2937 !important; 
+            color: #ffffff !important;
+        }
+        .dark .bg-gray-50 { 
+            background-color: #374151 !important; 
+            color: #ffffff !important;
+        }
+        .dark .bg-gray-100 { 
+            background-color: #374151 !important; 
+            color: #ffffff !important;
+        }
+        .dark .text-gray-800 { 
+            color: #ffffff !important; 
+        }
+        .dark .text-gray-700 { 
+            color: #e5e7eb !important; 
+        }
+        .dark .text-gray-600 { 
+            color: #d1d5db !important; 
+        }
+        .dark .text-gray-500 { 
+            color: #9ca3af !important; 
+        }
+        .dark .text-gray-400 { 
+            color: #9ca3af !important; 
+        }
+        .dark .border-gray-200 { 
+            border-color: #374151 !important; 
+        }
+        .dark .border-gray-700 { 
+            border-color: #4b5563 !important; 
+        }
+
+        .dark input,
+        .dark textarea,
+        .dark select {
+            background-color: #374151 !important;
+            color: #ffffff !important;
+            border-color: #4b5563 !important;
+            text-shadow: none !important;
+        }
+        
+        .dark input::placeholder,
+        .dark textarea::placeholder {
+            color: #9ca3af !important;
+        }
+        
+        .dark pre {
+            background-color: #1a1a1a !important;
+        }
+        
+        .dark pre code {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+            text-shadow: none !important;
+            -webkit-text-stroke: none !important;
+        }
+        
+        .dark code {
+            background-color: #374151 !important;
+            color: #ffffff !important;
+            text-shadow: none !important;
+        }
+        
+        .dark .webhook-item {
+            border-color: #374151 !important;
+        }
+
+        .dark .hover\\:bg-gray-50:hover {
+            background-color: #374151 !important;
+        }
+        
+        .dark .hover\\:bg-gray-200:hover {
+            background-color: #4b5563 !important;
+        }
+
+        .dark .sticky-header {
+            background-color: rgba(31, 41, 55, 0.95) !important;
+            color: #ffffff !important;
+        }
+
+        .dark button {
+            text-shadow: none !important;
+        }
+
+        .dark h1,
+        .dark h2,
+        .dark h3,
+        .dark h4,
+        .dark h5,
+        .dark h6 {
+            color: #ffffff !important;
+            text-shadow: none !important;
+        }
+
+        * { transition: background-color 0.3s ease, color 0.3s ease; }
+        
+        pre { white-space: pre-wrap; word-break: break-word; }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .hover-scale {
+            transition: transform 0.2s ease;
+        }
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+
+        .glass-bg {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        .dark .glass-bg {
+            background: rgba(31, 41, 55, 0.8);
+        }
+
+        .loading-pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        .content-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section-spacing {
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .dark .card {
+            background: rgba(30, 41, 59, 0.9);
+        }
+
+        .fade-up {
+            animation: fadeUp 0.3s ease-out;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .content-section {
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .dark .content-section {
+            background: #1f2937;
+        }
+
+        .main-header {
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Admin Authentication Required</h3>
+            <p class="text-gray-600 dark:text-gray-300 mb-4">This operation requires admin privileges. Please enter your admin token:</p>
+            <input 
+                type="password" 
+                id="admin-token-input" 
+                placeholder="Enter admin token..."
+                class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white mb-4 focus:ring-2 focus:ring-blue-500 outline-none">
+            <div class="flex gap-2 justify-end">
+                <button 
+                    onclick="cancelAdminModal()"
+                    class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition">
+                    Cancel
+                </button>
+                <button 
+                    onclick="submitAdminToken()"
+                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sticky-header w-full bg-white/90 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <a href="/" class="text-4xl font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 transition-colors">
+                    Webhook Catcher 🚀
+                </a>
+                <a href="/" class="px-3 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+                    ← Back
+                </a>
+                <span class="px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                    📋 Logs
+                </span>
+                <span id="admin-status" class="px-2 py-1 text-xs rounded hidden">
+                    🔒 Admin Protected
+                </span>
+            </div>
+            <button onclick="toggleDarkMode()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2">
+                <span class="dark:hidden">🌙</span>
+                <span class="hidden dark:inline">☀️</span>
+                <span class="dark:hidden">Dark</span>
+                <span class="hidden dark:inline">Light</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-8">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8 w-full">
+            <div class="flex flex-col lg:flex-row justify-between gap-4">
+                <div class="flex-1">
+                    <input 
+                        type="search" 
+                        name="search" 
+                        placeholder="🔍 Search webhooks..."
+                        class="w-full px-4 py-3 text-lg border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none"
+                        hx-get="/logs"
+                        hx-trigger="keyup changed delay:500ms"
+                        hx-target="#webhook-list">
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="/export?format=json" 
+                       class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors inline-flex items-center gap-2">
+                        <span>Export JSON</span>
+                        <span>📥</span>
+                    </a>
+                    <a href="/export?format=csv" 
+                       class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors inline-flex items-center gap-2">
+                        <span>Export CSV</span>
+                        <span>📥</span>
+                    </a>
+                    <button 
+                        onclick="clearLogsWithModal()"
+                        class="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors inline-flex items-center gap-2">
+                        <span>Clear All</span>
+                        <span>🗑️</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="webhook-list" 
+             class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden w-full"
+             hx-get="/logs"
+             hx-trigger="load, every 5s">
+            <div class="p-12 text-center">
+                <div class="animate-spin h-10 w-10 mx-auto mb-4">
+                    <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <p class="text-gray-500 dark:text-gray-400 text-lg">Loading webhooks...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            dayjs.extend(window.dayjs_plugin_relativeTime);
+        });
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            document.body.classList.toggle('dark');
+            localStorage.setItem('darkMode', html.classList.contains('dark'));
+        }
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('dark');
+        }
+        document.addEventListener('htmx:afterSwap', function(evt) {
+            if (!evt.target) return;
+            
+            evt.target.querySelectorAll('[data-timestamp]').forEach(el => {
+                el.textContent = dayjs(el.dataset.timestamp).fromNow();
+            });
+
+            evt.target.querySelectorAll('pre code').forEach(block => {
+                Prism.highlightElement(block);
+            });
+        });
+
+        async function executeAdminOperation(operation, operationName) {
+            try {
+                let result = await operation();
+                return result;
+            } catch (error) {
+                console.log(`Operation ${operationName} failed:`, error);
+                
+                const is401 = error.status === 401 || 
+                             (error.response && error.response.status === 401) ||
+                             (error.message && error.message.includes('401')) ||
+                             (error.message && error.message.includes('Admin token required'));
+                
+                if (is401) {
+                    console.log('401 detected, showing admin modal');
+                    return new Promise((resolve, reject) => {
+                        pendingAdminOperation = async () => {
+                            try {
+                                console.log('Retrying operation with token:', currentAdminToken ? 'provided' : 'missing');
+                                const result = await operation(currentAdminToken);
+                                resolve(result);
+                            } catch (retryError) {
+                                console.log('Retry failed:', retryError);
+                                const isRetry401 = retryError.status === 401 || 
+                                                 (retryError.response && retryError.response.status === 401) ||
+                                                 (retryError.message && retryError.message.includes('401')) ||
+                                                 (retryError.message && retryError.message.includes('Admin token required'));
+                                
+                                if (isRetry401) {
+                                    alert('❌ Invalid admin token. Please try again.');
+                                    currentAdminToken = null;
+                                    showAdminModal(pendingAdminOperation);
+                                } else {
+                                    alert(`❌ ${operationName} failed: ${retryError.message}`);
+                                    reject(retryError);
+                                }
+                            }
+                        };
+                        showAdminModal(pendingAdminOperation);
+                    });
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        window.replayWebhook = async function(btn) {
+            try {
+                const webhookItem = btn.closest('.webhook-item');
+                if (!webhookItem) {
+                    console.error('Could not find webhook item');
+                    return;
+                }
+                
+                const webhookId = webhookItem.dataset.id;
+                const targetUrl = btn.previousElementSibling.value;
+                
+                if (!webhookId) {
+                    console.error('No webhook ID found');
+                    return;
+                }
+
+                if (!targetUrl) {
+                    alert('Please enter a target URL');
+                    return;
+                }
+                
+                console.log(`Attempting to replay webhook ${webhookId} to ${targetUrl}`);
+                
+                btn.innerHTML = '⏳ Sending...';
+                btn.disabled = true;
+                
+                await executeAdminOperation(async (token) => {
+                    console.log('Executing replay operation, token provided:', !!token);
+                    
+                    const headers = {
+                        'Content-Type': 'application/json'
+                    };
+                    if (token) {
+                        headers['X-Admin-Token'] = token;
+                        console.log('Added admin token to headers');
+                    }
+                    
+                    const response = await fetch(`/replay/${webhookId}?target_url=${encodeURIComponent(targetUrl)}`, {
+                        method: 'POST',
+                        headers: headers
+                    });
+                    
+                    console.log('Replay response status:', response.status);
+                    
+                    if (!response.ok) {
+                        let errorMessage = `HTTP ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.detail || errorMessage;
+                        } catch (e) {
+                            errorMessage = response.statusText || errorMessage;
+                        }
+                        
+                        const err = new Error(errorMessage);
+                        err.status = response.status;
+                        err.response = response;
+                        
+                        console.log('Throwing error with status:', err.status);
+                        throw err;
+                    }
+                    
+                    return await response.json();
+                }, 'Replay webhook');
+                
+                console.log('Replay successful');
+                btn.innerHTML = '✅ Sent!';
+                btn.classList.remove('bg-blue-500', 'bg-red-500');
+                btn.classList.add('bg-green-500');
+                
+            } catch (error) {
+                console.error('Final replay error:', error);
+                if (!error.status || error.status !== 401) {
+                    btn.innerHTML = '❌ Failed!';
+                    btn.classList.remove('bg-blue-500', 'bg-green-500');
+                    btn.classList.add('bg-red-500');
+                    alert(`Replay failed: ${error.message}`);
+                }
+            }
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Replay';
+                btn.classList.remove('bg-green-500', 'bg-red-500');
+                btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            }, 2000);
+        };
+
+        let currentAdminToken = null;
+        let pendingAdminOperation = null;
+
+        function showAdminModal(operation) {
+            pendingAdminOperation = operation;
+            document.getElementById('admin-modal').classList.remove('hidden');
+            document.getElementById('admin-token-input').focus();
+        }
+
+        function cancelAdminModal() {
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.getElementById('admin-token-input').value = '';
+            pendingAdminOperation = null;
+            currentAdminToken = null;
+        }
+
+        function submitAdminToken() {
+            const token = document.getElementById('admin-token-input').value.trim();
+            if (!token) {
+                alert('Please enter a token');
+                return;
+            }
+            
+            currentAdminToken = token;
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.getElementById('admin-token-input').value = '';
+            
+            if (pendingAdminOperation) {
+                pendingAdminOperation();
+                pendingAdminOperation = null;
+            }
+        }
+
+        window.clearLogsWithModal = async function() {
+            const confirmed = confirm('Are you sure you want to clear all webhook logs?\n\nThis action cannot be undone and will remove all stored webhooks.');
+            if (!confirmed) return;
+            
+            try {
+                console.log('Attempting to clear logs');
+                
+                const response = await fetch('/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                console.log('Clear response status:', response.status);
+                
+                if (response.status === 401) {
+                    console.log('Got 401, showing admin modal for clear');
+                    showAdminModal(async () => {
+                        console.log('Retrying clear with admin token');
+                        try {
+                            const retryResponse = await fetch('/clear', {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'X-Admin-Token': currentAdminToken 
+                                }
+                            });
+                            
+                            if (retryResponse.ok) {
+                                alert('✅ Logs cleared successfully!');
+                                window.location.reload();
+                            } else {
+                                alert('❌ Clear failed - invalid admin token');
+                            }
+                        } catch (retryError) {
+                            alert('❌ Clear failed: ' + retryError.message);
+                        }
+                    });
+                    return; 
+                }
+                
+                if (response.ok) {
+                    alert('✅ Logs cleared successfully!');
+                    window.location.reload();
+                } else {
+                    alert('❌ Clear failed: HTTP ' + response.status);
+                }
+                
+            } catch (error) {
+                console.error('Clear error:', error);
+                alert('❌ Network error: ' + error.message);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/config');
+                const config = await response.json();
+                
+                const adminStatus = document.getElementById('admin-status');
+                if (config.admin_protection_enabled) {
+                    adminStatus.classList.remove('hidden');
+                    adminStatus.classList.add('bg-yellow-100', 'text-yellow-800', 'dark:bg-yellow-900', 'dark:text-yellow-200');
+                }
+            } catch (error) {
+                console.error('Failed to load config:', error);
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !document.getElementById('admin-modal').classList.contains('hidden')) {
+                cancelAdminModal();
+            }
+            if (e.key === 'Enter' && !document.getElementById('admin-modal').classList.contains('hidden')) {
+                submitAdminToken();
+            }
+        });
+    </script>
+</body>
+</html>
+

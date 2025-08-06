@@ -1,0 +1,91 @@
+<div class="p-6 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex items-center gap-4">
+        <div class="p-3 bg-blue-50 dark:bg-blue-900/50 rounded-lg">
+            <span class="text-3xl">📋</span>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Webhook Logs</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                {{ total_count }} webhook{{ 's' if total_count != 1 else '' }} received
+            </p>
+        </div>
+    </div>
+</div>
+
+{% if total_count > 0 and logs %}
+    <div class="divide-y divide-gray-200 dark:divide-gray-700">
+        {% for log in logs %}
+        <div class="webhook-item p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all" data-id="{{ log.id }}">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-mono px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg">
+                        #{{ log.id }}
+                    </span>
+                    <span class="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-white">
+                        {{ log.metadata.ip }}
+                    </span>
+                </div>
+                <span class="text-sm text-gray-500 dark:text-gray-300 font-mono relative-time" 
+                      data-timestamp="{{ log.timestamp.iso }}"
+                      title="{{ log.timestamp.display }}">
+                    {{ log.timestamp.display }}
+                </span>
+            </div>
+
+            {% if log.parsed_body %}
+            <pre class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg shadow-inner overflow-x-auto">
+                <code class="language-json text-sm text-gray-800 dark:text-white">{{ log.parsed_body | tojson(indent=2) }}</code>
+            </pre>
+            {% else %}
+            <pre class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg shadow-inner overflow-x-auto">
+                <code class="text-sm text-gray-800 dark:text-white">{{ log.body }}</code>
+            </pre>
+            {% endif %}
+
+            {% if log.matches %}
+            <div class="mt-2 space-y-1">
+                <p class="text-sm text-gray-500 dark:text-gray-300">Search matches:</p>
+                {% for match in log.matches %}
+                <div class="text-sm bg-yellow-50 dark:bg-yellow-900/30 p-2 rounded">
+                    <span class="font-medium text-yellow-800 dark:text-yellow-200">{{ match.term }}:</span>
+                    <span class="text-gray-700 dark:text-white">{{ match.context }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="mt-4 flex gap-2">
+                <input type="url" 
+                       placeholder="Target URL" 
+                       class="flex-1 px-3 py-2 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                       value="{{ request.base_url }}webhook">
+                <button onclick="replayWebhook(this)" 
+                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors">
+                    🔄 Replay
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if has_more %}
+    <div class="p-6 text-center border-t border-gray-200 dark:border-gray-700">
+        <button 
+            class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors inline-flex items-center gap-2"
+            hx-get="/logs?offset={{ offset + limit }}"
+            hx-target="#webhook-list"
+            hx-swap="beforeend">
+            <span>Load More</span>
+            <span>↓</span>
+        </button>
+    </div>
+    {% endif %}
+{% else %}
+    <div class="py-16 px-8 text-center">
+        <div class="max-w-sm mx-auto">
+            <div class="text-7xl mb-6">📭</div>
+            <h3 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">No webhooks yet</h3>
+            <p class="text-lg text-gray-600 dark:text-gray-300">Send a test webhook to get started!</p>
+        </div>
+    </div>
+{% endif %}
