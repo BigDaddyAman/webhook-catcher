@@ -48,7 +48,7 @@ graph TB
 ## Quick Start
 
 1. **Deploy on Railway:**  
-   [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/K2iWVB?referralCode=nIQTyp)
+   [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/l47VoY?referralCode=nIQTyp)
 
 2. **Send a webhook:**  
    Use your deployed `/webhook` endpoint with any service or tool (e.g., GitHub, Stripe, curl).
