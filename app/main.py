@@ -28,7 +28,7 @@ FORWARD_WEBHOOK_TOKEN = os.getenv("FORWARD_WEBHOOK_TOKEN")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
 # Database configuration - single source of truth for DB path
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_PATH = os.path.join(DATA_DIR, "webhooks.db")
 
 def verify_admin_token(request: Request) -> bool:
