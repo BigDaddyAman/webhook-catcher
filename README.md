@@ -234,14 +234,14 @@ When `FRONTEND_PASSWORD` is set, accessing protected routes will prompt your bro
 
 This template is optimized for modern cloud platforms:
 
-✅ **One-click deployment** with railway.json template  
-✅ **Environment variable management** for configuration  
-✅ **Volume-ready persistence** for SQLite database storage (manual volume setup required)
-✅ **Health checks** for service monitoring  
-✅ **Internal networking** for multi-service communication  
-✅ **Production security** with admin token protection  
-✅ **Modern web stack** (FastAPI + HTMX + TailwindCSS)  
-✅ **Cross-platform compatibility** (Unix/Windows/PowerShell)
+- ✅ **One-click deployment** with railway.json template
+- ✅ **Environment variable management** for configuration
+- ✅ **Volume-ready persistence** for SQLite database storage (manual volume setup required)
+- ✅ **Health checks** for service monitoring
+- ✅ **Internal networking** for multi-service communication
+- ✅ **Production security** with admin token protection
+- ✅ **Modern web stack** (FastAPI + HTMX + TailwindCSS)
+- ✅ **Cross-platform compatibility** (Unix/Windows/PowerShell)
 
 ---
 
