@@ -8,6 +8,7 @@ import json
 import httpx
 import os
 import csv
+import base64
 from io import StringIO
 from urllib.parse import urlparse
 import asyncio
@@ -26,6 +27,7 @@ security = HTTPBasic()
 FORWARD_WEBHOOK_URL = os.getenv("FORWARD_WEBHOOK_URL")
 FORWARD_WEBHOOK_TOKEN = os.getenv("FORWARD_WEBHOOK_TOKEN")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+FRONTEND_PASSWORD = os.getenv("FRONTEND_PASSWORD")
 
 # Database configuration - single source of truth for DB path
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -60,6 +62,37 @@ def require_admin(request: Request):
             headers={"WWW-Authenticate": "Bearer"}
         )
     return True
+
+def get_optional_credentials(request: Request):
+    """Get HTTP Basic credentials if provided, or None if not."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Basic "):
+        return None
+    try:
+        credentials = base64.b64decode(auth_header[6:]).decode("utf-8")
+        username, _, password = credentials.partition(":")
+        return HTTPBasicCredentials(username=username, password=password)
+    except Exception:
+        return None
+
+def verify_frontend_password(request: Request):
+    """Dependency to require frontend password via HTTP Basic Auth.
+
+    If FRONTEND_PASSWORD is not set, access is allowed without authentication.
+    Username can be anything; only the password is checked.
+    """
+    if not FRONTEND_PASSWORD or FRONTEND_PASSWORD.strip() == "":
+        return True  # No protection if password not set
+
+    credentials = get_optional_credentials(request)
+    if credentials and credentials.password == FRONTEND_PASSWORD:
+        return True
+
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid password",
+        headers={"WWW-Authenticate": "Basic realm=\"Webhook Catcher\""}
+    )
 
 def sanitize_headers(headers):
     """Redact sensitive header values"""
@@ -124,7 +157,7 @@ async def startup_event():
     init_db()
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
+async def home(request: Request, _: bool = Depends(verify_frontend_password)):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/healthz")
@@ -334,7 +367,7 @@ def highlight_search_matches(text: str, search: str) -> list:
         return []
 
 @app.get("/logs/view", response_class=HTMLResponse)
-async def view_logs(request: Request):
+async def view_logs(request: Request, _: bool = Depends(verify_frontend_password)):
     """Full logs page view"""
     logs, total_count, has_more = get_webhook_logs(limit=10)  
     return templates.TemplateResponse("logs.html", {
@@ -352,7 +385,8 @@ async def get_logs(
     request: Request,
     search: str = Query(None),
     offset: int = Query(0),
-    limit: int = Query(20)  
+    limit: int = Query(20),
+    _: bool = Depends(verify_frontend_password)
 ):
     """Partial logs view for HTMX updates"""
     try:
@@ -385,7 +419,7 @@ async def get_logs(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/export")
-async def export_logs(format: str = Query("json", enum=["json", "csv"])):
+async def export_logs(request: Request, format: str = Query("json", enum=["json", "csv"]), _: bool = Depends(verify_frontend_password)):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM webhooks ORDER BY timestamp DESC")
@@ -566,7 +600,7 @@ def get_total_webhook_count():
         return 0
 
 @app.get("/webhooks")
-async def list_webhooks(request: Request, limit: int = Query(50)):
+async def list_webhooks(request: Request, limit: int = Query(50), _: bool = Depends(verify_frontend_password)):
     """List available webhooks for replay testing"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()

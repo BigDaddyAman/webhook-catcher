@@ -93,6 +93,7 @@ graph TB
 | `FORWARD_WEBHOOK_URL` | Forward incoming webhooks to another service | No | - |
 | `FORWARD_WEBHOOK_TOKEN` | Authentication token for secure forwarding | No | - |
 | `ADMIN_TOKEN` | **Admin protection token for sensitive operations** | No | - |
+| `FRONTEND_PASSWORD` | **Password to protect the web UI from public access** | No | - |
 
 ### 🔒 Admin Protection (Production Feature)
 
@@ -151,6 +152,43 @@ curl https://your-app.railway.app/healthz
 - Keep the token secret and rotate it regularly
 - Use headers instead of query parameters when possible
 - Enable admin protection for production deployments
+
+### 🔐 Frontend Password Protection
+
+The `FRONTEND_PASSWORD` environment variable protects the **web UI** from public access using HTTP Basic Authentication.
+
+#### Protected Routes:
+- **Home page** (`GET /`)
+- **Logs view** (`GET /logs`, `GET /logs/view`)
+- **Export logs** (`GET /export`)
+- **List webhooks** (`GET /webhooks`)
+
+#### Unprotected Routes (remain open):
+- **Webhook receiver** (`POST /webhook`) - external services must be able to send webhooks
+- **Health check** (`GET /healthz`)
+- **Config status** (`GET /config`)
+
+#### Usage:
+
+**1. No Protection (Development)**
+```bash
+# Leave FRONTEND_PASSWORD empty or unset
+FRONTEND_PASSWORD=""
+```
+- Web UI is publicly accessible
+- Perfect for development and testing
+
+**2. Password Protection (Production)**
+```bash
+# Set a password to protect the web UI
+FRONTEND_PASSWORD="your-secret-password"
+```
+- Accessing the web UI prompts for HTTP Basic Auth
+- Username can be anything (only password is checked)
+- Browser remembers credentials for the session
+
+#### How it works:
+When `FRONTEND_PASSWORD` is set, accessing protected routes will prompt your browser's built-in HTTP Basic Auth dialog. Enter any username and the configured password to access the UI.
 
 ---
 
