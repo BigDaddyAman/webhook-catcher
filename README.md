@@ -31,6 +31,24 @@ Webhook Catcher is optimized for Railway:
 
 ---
 
+## ⚠️ Railway Volume Setup (Important)
+
+Webhook Catcher uses SQLite for storage.  
+To persist webhook data across redeploys on Railway, you **must manually add a volume**.
+
+### Required steps on Railway:
+1. Deploy the template
+2. Go to your service → **Volumes**
+3. Click **Add Volume**
+4. Mount it to: /app/data
+5. Redeploy the service
+
+Without a mounted volume, all webhook data will be lost on redeploys.  
+Once the volume is mounted, data will persist normally.
+
+---
+
+>>>>>>> faec7cb (docs: clarify Railway volume setup)
 ## ✨ Sophisticated Architecture Overview
 
 ```mermaid
@@ -219,7 +237,7 @@ This template is optimized for modern cloud platforms:
 
 ✅ **One-click deployment** with railway.json template  
 ✅ **Environment variable management** for configuration  
-✅ **Volume persistence** for SQLite database storage  
+✅ **Volume-ready persistence** for SQLite database storage (manual volume setup required)
 ✅ **Health checks** for service monitoring  
 ✅ **Internal networking** for multi-service communication  
 ✅ **Production security** with admin token protection  
