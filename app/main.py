@@ -27,6 +27,10 @@ FORWARD_WEBHOOK_URL = os.getenv("FORWARD_WEBHOOK_URL")
 FORWARD_WEBHOOK_TOKEN = os.getenv("FORWARD_WEBHOOK_TOKEN")
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
 
+# Database configuration - single source of truth for DB path
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DB_PATH = os.path.join(DATA_DIR, "webhooks.db")
+
 def verify_admin_token(request: Request) -> bool:
     """Verify admin token from header or query parameter"""
     if not ADMIN_TOKEN or ADMIN_TOKEN.strip() == "":
@@ -101,7 +105,9 @@ def format_timestamp(timestamp):
         }
 
 def init_db():
-    conn = sqlite3.connect('webhooks.db')
+    # Ensure data directory exists
+    os.makedirs(DATA_DIR, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS webhooks
@@ -125,7 +131,7 @@ async def home(request: Request):
 async def health_check():
     """Simple health check endpoint"""
     try:
-        conn = sqlite3.connect('webhooks.db')
+        conn = sqlite3.connect(DB_PATH)
         conn.close()
         return {"status": "ok", "admin_protected": bool(ADMIN_TOKEN and ADMIN_TOKEN.strip())}
     except Exception as e:
@@ -202,7 +208,7 @@ async def webhook(request: Request):
                 forward_webhook(headers, body_str, str(request.url))
             )
         
-        conn = sqlite3.connect('webhooks.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         
         print("Inserting into database...")
@@ -241,7 +247,7 @@ async def webhook(request: Request):
 
 def get_webhook_logs(offset: int = 0, limit: int = 20, search: str = None):
     """Helper function to fetch webhook logs"""
-    conn = sqlite3.connect('webhooks.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
     try:
@@ -380,7 +386,7 @@ async def get_logs(
 
 @app.get("/export")
 async def export_logs(format: str = Query("json", enum=["json", "csv"])):
-    conn = sqlite3.connect('webhooks.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM webhooks ORDER BY timestamp DESC")
     logs = [{"id": row[0], "timestamp": row[1], "headers": json.loads(row[2]), "body": row[3]} 
@@ -484,7 +490,7 @@ async def replay_webhook(webhook_id: int, request: Request, target_url: str = Qu
             detail="Invalid target URL. Must be http(s)://..."
         )
     
-    conn = sqlite3.connect('webhooks.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT headers, body FROM webhooks WHERE id = ?", (webhook_id,))
     row = c.fetchone()
@@ -529,7 +535,7 @@ async def clear_logs(request: Request):
             headers={"WWW-Authenticate": "Bearer"}
         )
     
-    conn = sqlite3.connect('webhooks.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM webhooks")
     conn.commit()
@@ -550,7 +556,7 @@ async def get_config():
 def get_total_webhook_count():
     """Get total count of webhooks received"""
     try:
-        conn = sqlite3.connect('webhooks.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM webhooks")
         count = c.fetchone()[0]
@@ -562,7 +568,7 @@ def get_total_webhook_count():
 @app.get("/webhooks")
 async def list_webhooks(request: Request, limit: int = Query(50)):
     """List available webhooks for replay testing"""
-    conn = sqlite3.connect('webhooks.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
     c.execute("SELECT COUNT(*) FROM webhooks")

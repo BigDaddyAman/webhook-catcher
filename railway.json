@@ -29,8 +29,8 @@
     },
     "volumes": [
         {
-            "name": "webhook-storage",
-            "mountPath": "/app"
+            "name": "webhook-catcher-storage",
+            "mountPath": "/app/data"
         }
     ]
 }
