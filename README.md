@@ -48,7 +48,6 @@ Once the volume is mounted, data will persist normally.
 
 ---
 
->>>>>>> faec7cb (docs: clarify Railway volume setup)
 ## ✨ Sophisticated Architecture Overview
 
 ```mermaid
