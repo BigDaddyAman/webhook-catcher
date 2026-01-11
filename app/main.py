@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, Query, Body, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 import sqlite3
 import json
@@ -18,6 +19,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Webhook Catcher")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 templates.env.filters["tojson"] = lambda value, indent=2: json.dumps(value, indent=indent)
 
