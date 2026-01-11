@@ -1,3 +1,10 @@
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.13-blue?style=flat)
+![Framework](https://img.shields.io/badge/FastAPI-async-green)
+![Database](https://img.shields.io/badge/SQLite-persistent-lightgrey)
+![UI](https://img.shields.io/badge/HTMX-realtime-orange)
+![Deploy](https://img.shields.io/badge/deploy-Railway-purple)
+
 # Webhook Catcher
 
 > The easiest way to capture and debug webhooks in production and development.
@@ -26,25 +33,21 @@ Webhook Catcher is optimized for Railway:
 
 - 🧠 Zero config — deploy in seconds
 - 🪄 Auto-generated domain (instantly test your webhook)
+- 💾 Automatic persistent storage (no data loss on redeploy)
 - 🔐 Built-in secret management & protection
-- 📈 Scalable — from solo devs to production
 
 ---
 
-## ⚠️ Railway Volume Setup (Important)
+## 💾 Persistent Storage (Railway)
 
-Webhook Catcher uses SQLite for storage.  
-To persist webhook data across redeploys on Railway, you **must manually add a volume**.
+Webhook Catcher uses SQLite for storage.
 
-### Required steps on Railway:
-1. Deploy the template
-2. Go to your service → **Volumes**
-3. Click **Add Volume**
-4. Mount it to: /app/data
-5. Redeploy the service
+When deploying via the **Railway template**, a persistent volume is
+**automatically created and mounted** — no manual setup required.
 
-Without a mounted volume, all webhook data will be lost on redeploys.  
-Once the volume is mounted, data will persist normally.
+✔ Data persists across redeploys  
+✔ No configuration needed  
+✔ Works out of the box
 
 ---
 
@@ -236,7 +239,7 @@ This template is optimized for modern cloud platforms:
 
 - ✅ **One-click deployment** with railway.json template
 - ✅ **Environment variable management** for configuration
-- ✅ **Volume-ready persistence** for SQLite database storage (manual volume setup required)
+- ✅ **Automatic persistent storage** via Railway volumes
 - ✅ **Health checks** for service monitoring
 - ✅ **Internal networking** for multi-service communication
 - ✅ **Production security** with admin token protection

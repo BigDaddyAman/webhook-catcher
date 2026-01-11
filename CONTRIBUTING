@@ -19,7 +19,7 @@ All kinds of contributions are welcome — bug reports, documentation improvemen
 ## 🛠 Development Setup
 
 ### Requirements
-- Python 3.9+
+- Python 3.13+  // Changed from 3.9+
 - pip
 - (Optional) Docker
 
@@ -46,8 +46,8 @@ Before opening a PR, please ensure:
 - UI pages load correctly
 
 For Railway-related changes, please test:
-- Deployment without a volume
-- Deployment **with** a volume mounted at `/app/data`
+- Deployment via the Railway template (volume auto-attached)
+- Application behavior across redeploys (data persistence)
 
 ---
 
@@ -56,11 +56,13 @@ For Railway-related changes, please test:
 Webhook Catcher uses SQLite.
 
 - The database path is `/app/data/webhooks.db`
-- On Railway, contributors must manually attach a volume at:
-  ```
-  /app/data
-  ```
-- Without a volume, data loss on redeploy is expected
+- When deployed via the **Railway template**, a persistent volume is
+  **automatically attached and mounted** at `/app/data`
+- Data persists across redeploys without manual setup
+
+For local development:
+- Data is stored on the local filesystem
+- Data loss on container rebuilds is expected unless you mount a volume manually
 
 Please do not introduce hardcoded paths outside `/app/data`.
 

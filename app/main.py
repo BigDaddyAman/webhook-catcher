@@ -2,7 +2,9 @@ from fastapi import FastAPI, Request, HTTPException, Query, Body, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
 from datetime import datetime
+from pathlib import Path
 import sqlite3
 import json
 import httpx
@@ -17,8 +19,20 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = FastAPI(title="Webhook Catcher")
-templates = Jinja2Templates(directory="templates")
+
+app.mount(
+    "/static",
+    StaticFiles(directory=os.path.join(BASE_DIR, "static")),
+    name="static"
+)
+
+templates = Jinja2Templates(
+    directory=os.path.join(BASE_DIR, "templates")
+)
+
 templates.env.filters["tojson"] = lambda value, indent=2: json.dumps(value, indent=indent)
 
 SENSITIVE_HEADERS = {'authorization', 'cookie', 'x-api-key', 'api-key'}

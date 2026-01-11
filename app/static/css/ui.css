@@ -1,0 +1,277 @@
+/* =========================
+   Base / Reset
+========================= */
+
+html,
+body {
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+* {
+    transition: background-color 0.3s ease,
+                color 0.3s ease,
+                border-color 0.3s ease;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* =========================
+   Dark Mode Base
+========================= */
+
+html.dark,
+html.dark body {
+    background-color: #111827 !important;
+}
+
+.dark {
+    color: #ffffff !important;
+}
+
+.dark * {
+    text-shadow: none !important;
+    -webkit-text-stroke: none !important;
+}
+
+/* =========================
+   Background Overrides
+========================= */
+
+.dark .bg-white {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+}
+
+/* =========================
+   Text Colors
+========================= */
+
+.dark .text-gray-800 { color: #ffffff !important; }
+.dark .text-gray-700 { color: #e5e7eb !important; }
+.dark .text-gray-600 { color: #d1d5db !important; }
+.dark .text-gray-500,
+.dark .text-gray-400 { color: #9ca3af !important; }
+
+/* =========================
+   Borders
+========================= */
+
+.dark .border,
+.dark .border-gray-200 {
+    border-color: #374151 !important;
+}
+
+.dark .border-gray-700 {
+    border-color: #4b5563 !important;
+}
+
+/* =========================
+   Forms
+========================= */
+
+.dark input,
+.dark textarea,
+.dark select {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+    border-color: #4b5563 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: #9ca3af !important;
+}
+
+/* =========================
+   Code / Prism
+========================= */
+
+.dark pre {
+    background-color: #1a1a1a !important;
+}
+
+.dark pre code {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+.dark code {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+}
+
+/* =========================
+   Hover Fixes (Tailwind Escaped)
+========================= */
+
+.dark .hover\:bg-gray-50:hover {
+    background-color: #374151 !important;
+}
+
+.dark .hover\:bg-gray-200:hover {
+    background-color: #4b5563 !important;
+}
+
+/* =========================
+   Headers / Buttons
+========================= */
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark button,
+.dark a {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+/* =========================
+   Sticky Header
+========================= */
+
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+.dark .sticky-header {
+    background-color: rgba(31, 41, 55, 0.95) !important;
+    color: #ffffff !important;
+}
+
+/* =========================
+   Cards / Sections
+========================= */
+
+.card {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.dark .card {
+    background: rgba(30, 41, 59, 0.9);
+}
+
+.content-section {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dark .content-section {
+    background: #1f2937;
+}
+
+/* =========================
+   Glass Effect
+========================= */
+
+.glass-bg {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+}
+
+.dark .glass-bg {
+    background: rgba(31, 41, 55, 0.8);
+}
+
+/* =========================
+   Layout Helpers
+========================= */
+
+.content-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.section-spacing {
+    margin-bottom: 2rem;
+}
+
+.main-header {
+    padding: 1rem 0;
+    margin-bottom: 2rem;
+}
+
+/* =========================
+   Animations
+========================= */
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.animate-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.fade-up {
+    animation: fadeUp 0.3s ease-out;
+}
+
+.loading-pulse {
+    animation: pulse 1.5s infinite;
+}
+
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+/* =========================
+   Webhook Items
+========================= */
+
+.dark .webhook-item {
+    border-color: #374151 !important;
+}
+
+/* =========================
+   Highlight
+========================= */
+
+.highlight {
+    background-color: #fef08a;
+}
+
+.dark .highlight {
+    background-color: #92400e !important;
+    color: #ffffff !important;
+}
