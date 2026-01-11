@@ -1,3 +1,10 @@
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.13-blue?style=flat)
+![Framework](https://img.shields.io/badge/FastAPI-async-green)
+![Database](https://img.shields.io/badge/SQLite-persistent-lightgrey)
+![UI](https://img.shields.io/badge/HTMX-realtime-orange)
+![Deploy](https://img.shields.io/badge/deploy-Railway-purple)
+
 # Webhook Catcher
 
 > The easiest way to capture and debug webhooks in production and development.
