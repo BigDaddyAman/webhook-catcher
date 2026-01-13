@@ -108,7 +108,8 @@
         <div id="logs-container"
              class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden w-full"
              hx-ext="sse"
-             sse-connect="/sse/webhooks">
+             sse-connect="/sse/webhooks"
+             sse-withcredentials="true">
             <div id="webhook-list"
                  hx-get="/logs"
                  hx-trigger="load"

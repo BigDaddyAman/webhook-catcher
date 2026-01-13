@@ -177,7 +177,7 @@
              class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
              hx-ext="sse"
              sse-connect="/sse/webhooks"
-             sse-close="handleSSEClose">
+             sse-withcredentials="true">
             <div id="logs"
                  hx-get="/logs"
                  hx-trigger="load"
