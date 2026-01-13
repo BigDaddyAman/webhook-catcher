@@ -218,8 +218,6 @@
             
             loadConfigStatus();
 
-            setInterval(loadConfigStatus, 30000);
-
             // SSE event handlers
             setupSSEHandlers();
         });
@@ -280,6 +278,16 @@
             // Handle new webhook items from SSE
             document.body.addEventListener('htmx:sseMessage', function(evt) {
                 if (evt.detail.type === 'webhook') {
+                    // Update total count from SSE event
+                    try {
+                        const data = JSON.parse(evt.detail.data);
+                        if (data.total_webhooks !== undefined) {
+                            document.getElementById('total-count').textContent = data.total_webhooks;
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse webhook event for count:', e);
+                    }
+
                     // If user is searching, don't show new items
                     const searchInput = document.getElementById('search-input');
                     if (searchInput && searchInput.value.trim()) {

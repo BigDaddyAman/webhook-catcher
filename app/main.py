@@ -316,7 +316,8 @@ async def webhook(request: Request):
             "headers": sanitize_headers(headers),
             "metadata": extract_metadata(headers),
             "body": body_str,
-            "parsed_body": parsed_json
+            "parsed_body": parsed_json,
+            "total_webhooks": get_total_webhook_count()
         }
         await webhook_broadcaster.broadcast(webhook_event)
 
