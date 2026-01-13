@@ -1,0 +1,41 @@
+<div class="webhook-item p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all sse-new" data-id="{{ log.id }}">
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex items-center gap-2">
+            <span class="text-sm font-mono px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg">
+                #{{ log.id }}
+            </span>
+            <span class="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-white">
+                {{ log.metadata.ip }}
+            </span>
+            <span class="new-badge text-xs px-2 py-1 rounded-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                NEW
+            </span>
+        </div>
+        <span class="text-sm text-gray-500 dark:text-gray-300 font-mono relative-time"
+              data-timestamp="{{ log.timestamp.iso }}"
+              title="{{ log.timestamp.display }}">
+            {{ log.timestamp.display }}
+        </span>
+    </div>
+
+    {% if log.parsed_body %}
+    <pre class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg shadow-inner overflow-x-auto">
+        <code class="language-json text-sm text-gray-800 dark:text-white">{{ log.parsed_body | tojson(indent=2) }}</code>
+    </pre>
+    {% else %}
+    <pre class="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg shadow-inner overflow-x-auto">
+        <code class="text-sm text-gray-800 dark:text-white">{{ log.body }}</code>
+    </pre>
+    {% endif %}
+
+    <div class="mt-4 flex gap-2">
+        <input type="url"
+               placeholder="Target URL"
+               class="flex-1 px-3 py-2 text-sm border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+               value="">
+        <button onclick="replayWebhook(this)"
+                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors">
+            Replay
+        </button>
+    </div>
+</div>

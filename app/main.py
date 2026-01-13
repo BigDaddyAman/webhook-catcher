@@ -3,8 +3,11 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
+from sse_starlette.sse import EventSourceResponse
 from datetime import datetime
 from pathlib import Path
+from dataclasses import dataclass, field
+from typing import Set
 import sqlite3
 import json
 import httpx
@@ -46,6 +49,43 @@ FRONTEND_PASSWORD = os.getenv("FRONTEND_PASSWORD")
 # Database configuration - single source of truth for DB path
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_PATH = os.path.join(DATA_DIR, "webhooks.db")
+
+# SSE Broadcaster for real-time updates
+@dataclass
+class WebhookBroadcaster:
+    """Manages SSE connections and broadcasts webhook events to all connected clients."""
+
+    _subscribers: Set[asyncio.Queue] = field(default_factory=set)
+
+    async def subscribe(self) -> asyncio.Queue:
+        """Create a new subscription queue for a client."""
+        queue = asyncio.Queue()
+        self._subscribers.add(queue)
+        logger.info(f"SSE client connected. Total clients: {len(self._subscribers)}")
+        return queue
+
+    def unsubscribe(self, queue: asyncio.Queue) -> None:
+        """Remove a subscription when client disconnects."""
+        self._subscribers.discard(queue)
+        logger.info(f"SSE client disconnected. Total clients: {len(self._subscribers)}")
+
+    async def broadcast(self, webhook_data: dict) -> None:
+        """Send webhook data to all connected clients."""
+        if not self._subscribers:
+            return
+        for queue in self._subscribers.copy():
+            try:
+                await queue.put(webhook_data)
+            except Exception:
+                self._subscribers.discard(queue)
+
+    @property
+    def client_count(self) -> int:
+        """Return number of connected SSE clients."""
+        return len(self._subscribers)
+
+# Global broadcaster instance
+webhook_broadcaster = WebhookBroadcaster()
 
 def verify_admin_token(request: Request) -> bool:
     """Verify admin token from header or query parameter"""
@@ -257,16 +297,29 @@ async def webhook(request: Request):
         
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        
+
         print("Inserting into database...")
+        timestamp = datetime.now().isoformat()
         c.execute(
             "INSERT INTO webhooks (timestamp, headers, body) VALUES (?, ?, ?)",
-            (datetime.now().isoformat(), json.dumps(headers), body_str)
+            (timestamp, json.dumps(headers), body_str)
         )
+        webhook_id = c.lastrowid
         conn.commit()
         conn.close()
         print("Database insert complete")
-        
+
+        # Broadcast to SSE clients
+        webhook_event = {
+            "id": webhook_id,
+            "timestamp": format_timestamp(timestamp),
+            "headers": sanitize_headers(headers),
+            "metadata": extract_metadata(headers),
+            "body": body_str,
+            "parsed_body": parsed_json
+        }
+        await webhook_broadcaster.broadcast(webhook_event)
+
         forwarding_result = None
         if forward_task:
             try:
@@ -598,7 +651,8 @@ async def get_config():
         "forwarding_url": FORWARD_WEBHOOK_URL if FORWARD_WEBHOOK_URL else None,
         "authentication_enabled": bool(FORWARD_WEBHOOK_TOKEN),
         "admin_protection_enabled": bool(ADMIN_TOKEN and ADMIN_TOKEN.strip()),
-        "total_webhooks": get_total_webhook_count()
+        "total_webhooks": get_total_webhook_count(),
+        "sse_clients": webhook_broadcaster.client_count
     }
 
 def get_total_webhook_count():
@@ -653,3 +707,67 @@ async def list_webhooks(request: Request, limit: int = Query(50), _: bool = Depe
         "count": len(webhooks),
         "total_count": total_count
     }
+
+@app.get("/sse/webhooks")
+async def sse_webhooks(request: Request, _: bool = Depends(verify_frontend_password)):
+    """
+    SSE endpoint for real-time webhook notifications.
+
+    Event types:
+    - 'webhook': New webhook received (contains rendered HTML partial)
+    - 'ping': Keep-alive heartbeat every 30 seconds
+    - 'connected': Initial connection confirmation
+    """
+
+    async def event_generator():
+        queue = await webhook_broadcaster.subscribe()
+        try:
+            # Send initial connection event
+            yield {
+                "event": "connected",
+                "data": json.dumps({"status": "connected", "timestamp": datetime.now().isoformat()})
+            }
+
+            while True:
+                try:
+                    # Wait for new webhook with timeout for heartbeat
+                    webhook_data = await asyncio.wait_for(queue.get(), timeout=30.0)
+
+                    # Render the single webhook item as HTML partial
+                    html_content = templates.get_template("webhook_item.html").render(
+                        request=request,
+                        log=webhook_data
+                    )
+
+                    yield {
+                        "event": "webhook",
+                        "data": html_content,
+                        "id": str(webhook_data["id"])
+                    }
+
+                    # Also send count update
+                    yield {
+                        "event": "count",
+                        "data": json.dumps({"total": get_total_webhook_count()})
+                    }
+
+                except asyncio.TimeoutError:
+                    # Send heartbeat to keep connection alive
+                    yield {
+                        "event": "ping",
+                        "data": json.dumps({"timestamp": datetime.now().isoformat()})
+                    }
+
+        except asyncio.CancelledError:
+            # Client disconnected
+            pass
+        finally:
+            webhook_broadcaster.unsubscribe(queue)
+
+    return EventSourceResponse(
+        event_generator(),
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
+        }
+    )

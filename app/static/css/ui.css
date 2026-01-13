@@ -275,3 +275,57 @@ html.dark body {
     background-color: #92400e !important;
     color: #ffffff !important;
 }
+
+/* =========================
+   SSE / Real-time Updates
+========================= */
+
+/* New webhook highlight animation */
+@keyframes webhookPulse {
+    0% {
+        background-color: rgba(34, 197, 94, 0.3);
+        transform: scale(1.005);
+    }
+    100% {
+        background-color: transparent;
+        transform: scale(1);
+    }
+}
+
+.webhook-item.sse-new {
+    animation: webhookPulse 2s ease-out;
+    border-left: 3px solid #22c55e;
+}
+
+.dark .webhook-item.sse-new {
+    animation: webhookPulse 2s ease-out;
+    border-left: 3px solid #22c55e;
+}
+
+/* NEW badge animation */
+.new-badge {
+    animation: fadeOut 5s forwards;
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* SSE Status indicator */
+#sse-dot {
+    transition: background-color 0.3s ease;
+}
+
+#sse-dot.bg-green-500 {
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.6);
+}
+
+#sse-dot.bg-red-500 {
+    animation: pulse 1.5s infinite;
+}
+
+#sse-dot.bg-yellow-500 {
+    animation: pulse 1s infinite;
+}
