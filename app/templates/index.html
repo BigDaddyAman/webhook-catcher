@@ -253,21 +253,12 @@
                 updateSSEStatus('disconnected');
             });
 
-            // Handle incoming SSE messages
+            // Handle incoming SSE messages (for connection status and heartbeat)
             document.body.addEventListener('htmx:sseBeforeMessage', function(evt) {
                 const eventType = evt.detail.type;
 
                 if (eventType === 'connected') {
                     updateSSEStatus('connected');
-                }
-
-                if (eventType === 'count') {
-                    try {
-                        const data = JSON.parse(evt.detail.data);
-                        document.getElementById('total-count').textContent = data.total;
-                    } catch (e) {
-                        console.error('Failed to parse count event:', e);
-                    }
                 }
 
                 if (eventType === 'ping') {
@@ -322,11 +313,16 @@
                             }, 5000);
                         }
 
-                        // Update log count
+                        // Update log count and total count
                         const webhookItems = document.querySelectorAll('.webhook-item');
                         const logCount = document.querySelector('.log-count');
                         if (logCount && webhookItems) {
                             logCount.textContent = `Showing ${webhookItems.length} log${webhookItems.length !== 1 ? 's' : ''}`;
+                        }
+                        const totalCount = document.getElementById('total-count');
+                        if (totalCount) {
+                            const current = parseInt(totalCount.textContent, 10) || 0;
+                            totalCount.textContent = current + 1;
                         }
                     }, 50);
                 }
