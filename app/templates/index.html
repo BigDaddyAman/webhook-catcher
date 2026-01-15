@@ -227,6 +227,19 @@
         const MAX_SSE_RETRIES = 5;
         let isSearching = false;
 
+        function formatAndHighlight(element) {
+            try {
+                element.textContent = JSON.stringify(JSON.parse(element.textContent), null, 2);
+            } catch (e) {
+                // JSON parsing failed - display as-is (may be invalid JSON or plain text)
+            }
+            try {
+                Prism.highlightElement(element);
+            } catch (e) {
+                console.error('Prism highlighting error:', e);
+            }
+        }
+
         function setupSSEHandlers() {
             // Handle SSE connection open
             document.body.addEventListener('htmx:sseOpen', function(evt) {
@@ -269,16 +282,6 @@
             // Handle new webhook items from SSE
             document.body.addEventListener('htmx:sseMessage', function(evt) {
                 if (evt.detail.type === 'webhook') {
-                    // Update total count from SSE event
-                    try {
-                        const data = JSON.parse(evt.detail.data);
-                        if (data.total_webhooks !== undefined) {
-                            document.getElementById('total-count').textContent = data.total_webhooks;
-                        }
-                    } catch (e) {
-                        console.error('Failed to parse webhook event for count:', e);
-                    }
-
                     // If user is searching, don't show new items
                     const searchInput = document.getElementById('search-input');
                     if (searchInput && searchInput.value.trim()) {
@@ -296,14 +299,7 @@
                             }
 
                             // Apply Prism highlighting
-                            const codeBlocks = newItem.querySelectorAll('pre code');
-                            codeBlocks.forEach(block => {
-                                try {
-                                    const formatted = JSON.stringify(JSON.parse(block.textContent), null, 2);
-                                    block.textContent = formatted;
-                                    Prism.highlightElement(block);
-                                } catch (e) {}
-                            });
+                            newItem.querySelectorAll('pre code').forEach(formatAndHighlight);
 
                             // Remove the sse-new class after animation
                             setTimeout(() => {
