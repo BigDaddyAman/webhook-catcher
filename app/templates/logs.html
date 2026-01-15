@@ -154,9 +154,11 @@
                 sseRetryCount++;
             });
 
+            // TODO: Could implement a reconnect strategy instead of immediate fallback
             document.body.addEventListener('htmx:sseClose', function(evt) {
-                console.log('SSE connection closed');
+                console.log('SSE connection closed, falling back to polling');
                 updateSSEStatus('disconnected');
+                enablePollingFallback();
             });
 
             document.body.addEventListener('htmx:sseMessage', function(evt) {
