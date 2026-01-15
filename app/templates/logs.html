@@ -2,7 +2,8 @@
     <meta charset="UTF-8">
     <title>Webhook Logs - Webhook Catcher</title>
 
-    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/relativeTime.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
@@ -66,10 +67,11 @@
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8 w-full">
             <div class="flex flex-col lg:flex-row justify-between gap-4">
                 <div class="flex-1">
-                    <input 
-                        type="search" 
-                        name="search" 
-                        placeholder="🔍 Search webhooks..."
+                    <input
+                        type="search"
+                        name="search"
+                        id="search-input"
+                        placeholder="Search webhooks..."
                         class="w-full px-4 py-3 text-lg border rounded-lg bg-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none"
                         hx-get="/logs"
                         hx-trigger="keyup changed delay:500ms"
@@ -96,18 +98,32 @@
             </div>
         </div>
 
-        <div id="webhook-list" 
+        <div class="flex items-center gap-2 mb-2">
+            <div id="sse-indicator" class="flex items-center gap-1 text-xs">
+                <span id="sse-dot" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                <span id="sse-status-text" class="text-gray-500 dark:text-gray-400">Connecting...</span>
+            </div>
+        </div>
+
+        <div id="logs-container"
              class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden w-full"
-             hx-get="/logs"
-             hx-trigger="load, every 5s">
-            <div class="p-12 text-center">
-                <div class="animate-spin h-10 w-10 mx-auto mb-4">
-                    <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+             hx-ext="sse"
+             sse-connect="/sse/webhooks"
+             sse-withcredentials="true">
+            <div id="webhook-list"
+                 hx-get="/logs"
+                 hx-trigger="load"
+                 sse-swap="webhook"
+                 hx-swap="afterbegin">
+                <div class="p-12 text-center">
+                    <div class="animate-spin h-10 w-10 mx-auto mb-4">
+                        <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-500 dark:text-gray-400 text-lg">Loading webhooks...</p>
                 </div>
-                <p class="text-gray-500 dark:text-gray-400 text-lg">Loading webhooks...</p>
             </div>
         </div>
     </div>
@@ -115,7 +131,109 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             dayjs.extend(window.dayjs_plugin_relativeTime);
+            setupSSEHandlers();
         });
+
+        // SSE Connection Management
+        let sseRetryCount = 0;
+        const MAX_SSE_RETRIES = 5;
+
+        function setupSSEHandlers() {
+            document.body.addEventListener('htmx:sseOpen', function(evt) {
+                console.log('SSE connected');
+                sseRetryCount = 0;
+                updateSSEStatus('connected');
+            });
+
+            document.body.addEventListener('htmx:sseError', function(evt) {
+                console.error('SSE error:', evt.detail);
+                updateSSEStatus('error');
+                if (sseRetryCount >= MAX_SSE_RETRIES) {
+                    enablePollingFallback();
+                }
+                sseRetryCount++;
+            });
+
+            // TODO: Could implement a reconnect strategy instead of immediate fallback
+            document.body.addEventListener('htmx:sseClose', function(evt) {
+                console.log('SSE connection closed, falling back to polling');
+                updateSSEStatus('disconnected');
+                enablePollingFallback();
+            });
+
+            document.body.addEventListener('htmx:sseMessage', function(evt) {
+                if (evt.detail.type === 'webhook') {
+                    const searchInput = document.getElementById('search-input');
+                    if (searchInput && searchInput.value.trim()) {
+                        return;
+                    }
+
+                    setTimeout(() => {
+                        const newItem = document.querySelector('.webhook-item.sse-new');
+                        if (newItem) {
+                            const urlInput = newItem.querySelector('input[type="url"]');
+                            if (urlInput) {
+                                urlInput.value = window.location.origin + '/webhook';
+                            }
+
+                            const codeBlocks = newItem.querySelectorAll('pre code');
+                            codeBlocks.forEach(block => {
+                                try {
+                                    const formatted = JSON.stringify(JSON.parse(block.textContent), null, 2);
+                                    block.textContent = formatted;
+                                    Prism.highlightElement(block);
+                                } catch (e) {}
+                            });
+
+                            setTimeout(() => {
+                                newItem.classList.remove('sse-new');
+                                const badge = newItem.querySelector('.new-badge');
+                                if (badge) badge.remove();
+                            }, 5000);
+                        }
+                    }, 50);
+                }
+            });
+        }
+
+        function updateSSEStatus(status) {
+            const dot = document.getElementById('sse-dot');
+            const text = document.getElementById('sse-status-text');
+            if (!dot || !text) return;
+
+            switch (status) {
+                case 'connected':
+                    dot.className = 'w-2 h-2 rounded-full bg-green-500';
+                    text.textContent = 'Live';
+                    break;
+                case 'error':
+                case 'disconnected':
+                    dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                    text.textContent = 'Disconnected';
+                    break;
+                default:
+                    dot.className = 'w-2 h-2 rounded-full bg-yellow-500';
+                    text.textContent = 'Connecting...';
+            }
+        }
+
+        function enablePollingFallback() {
+            const logsContainer = document.getElementById('logs-container');
+            const webhookList = document.getElementById('webhook-list');
+
+            if (logsContainer) {
+                logsContainer.removeAttribute('hx-ext');
+                logsContainer.removeAttribute('sse-connect');
+            }
+
+            if (webhookList) {
+                webhookList.setAttribute('hx-trigger', 'load, every 10s');
+                htmx.process(webhookList);
+            }
+
+            const text = document.getElementById('sse-status-text');
+            if (text) text.textContent = 'Polling (10s)';
+        }
 
         function toggleDarkMode() {
             const html = document.documentElement;

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Webhook Catcher</title>
-    <script src="https://unpkg.com/htmx.org@1.9.3"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
     <script src="https://unpkg.com/hyperscript.org@0.9.9"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
@@ -139,10 +140,11 @@
         <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
             <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <h2 class="text-xl font-semibold">📋 Webhook Logs</h2>
-                <input 
-                    type="search" 
-                    name="search" 
-                    placeholder="🔍 Search logs..." 
+                <input
+                    type="search"
+                    name="search"
+                    id="search-input"
+                    placeholder="Search logs..."
                     class="px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     hx-get="/logs"
                     hx-trigger="keyup changed delay:500ms"
@@ -163,20 +165,35 @@
             </div>
         </div>
 
-        <div class="log-count text-sm text-gray-600 dark:text-gray-400 mb-2">Loading logs...</div>
-        
-        <div id="logs" 
+        <div class="flex items-center gap-2 mb-2">
+            <div class="log-count text-sm text-gray-600 dark:text-gray-400">Loading logs...</div>
+            <div id="sse-indicator" class="flex items-center gap-1 text-xs">
+                <span id="sse-dot" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                <span id="sse-status-text" class="text-gray-500 dark:text-gray-400">Connecting...</span>
+            </div>
+        </div>
+
+        <div id="logs-container"
              class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
-             hx-get="/logs"
-             hx-trigger="load, every 5s">
-            <div class="p-8 text-center text-gray-500 dark:text-gray-400">
-                <div class="animate-spin h-8 w-8 mx-auto mb-4">
-                    <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+             hx-ext="sse"
+             sse-connect="/sse/webhooks"
+             sse-withcredentials="true">
+            <!-- Hidden element to receive count SSE events -->
+            <div id="sse-count-receiver" sse-swap="count" hx-swap="innerHTML" style="display:none;"></div>
+            <div id="logs"
+                 hx-get="/logs"
+                 hx-trigger="load"
+                 sse-swap="webhook"
+                 hx-swap="afterbegin">
+                <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                    <div class="animate-spin h-8 w-8 mx-auto mb-4">
+                        <svg class="text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                    <p>Loading webhooks...</p>
                 </div>
-                <p>Loading webhooks...</p>
             </div>
         </div>
     </div>
@@ -202,9 +219,172 @@
             }
             
             loadConfigStatus();
-            
-            setInterval(loadConfigStatus, 30000);
+
+            // SSE event handlers
+            setupSSEHandlers();
         });
+
+        // SSE Connection Management
+        let sseRetryCount = 0;
+        const MAX_SSE_RETRIES = 5;
+        let isSearching = false;
+
+        function formatAndHighlight(element) {
+            try {
+                element.textContent = JSON.stringify(JSON.parse(element.textContent), null, 2);
+            } catch (e) {
+                // JSON parsing failed - display as-is (may be invalid JSON or plain text)
+            }
+            try {
+                Prism.highlightElement(element);
+            } catch (e) {
+                console.error('Prism highlighting error:', e);
+            }
+        }
+
+        function setupSSEHandlers() {
+            // Handle SSE connection open
+            document.body.addEventListener('htmx:sseOpen', function(evt) {
+                console.log('SSE connected');
+                sseRetryCount = 0;
+                updateSSEStatus('connected');
+            });
+
+            // Handle SSE errors
+            document.body.addEventListener('htmx:sseError', function(evt) {
+                console.error('SSE error:', evt.detail);
+                updateSSEStatus('error');
+
+                if (sseRetryCount >= MAX_SSE_RETRIES) {
+                    console.log('SSE failed, falling back to polling');
+                    enablePollingFallback();
+                }
+                sseRetryCount++;
+            });
+
+            // Handle SSE close
+            // TODO: Could implement a reconnect strategy instead of immediate fallback
+            document.body.addEventListener('htmx:sseClose', function(evt) {
+                console.log('SSE connection closed, falling back to polling');
+                updateSSEStatus('disconnected');
+                enablePollingFallback();
+            });
+
+            // Handle incoming SSE messages (for connection status and heartbeat)
+            document.body.addEventListener('htmx:sseBeforeMessage', function(evt) {
+                const eventType = evt.detail.type;
+
+                if (eventType === 'connected') {
+                    updateSSEStatus('connected');
+                }
+
+                if (eventType === 'ping') {
+                    console.log('SSE heartbeat received');
+                }
+            });
+
+            // Handle SSE messages (webhook items and count updates)
+            document.body.addEventListener('htmx:sseMessage', function(evt) {
+                if (evt.detail.type === 'webhook') {
+                    // If user is searching, don't show new items
+                    const searchInput = document.getElementById('search-input');
+                    if (searchInput && searchInput.value.trim()) {
+                        return;
+                    }
+
+                    // Highlight the new item
+                    setTimeout(() => {
+                        const newItem = document.querySelector('.webhook-item.sse-new');
+                        if (newItem) {
+                            // Set the replay URL
+                            const urlInput = newItem.querySelector('input[type="url"]');
+                            if (urlInput) {
+                                urlInput.value = window.location.origin + '/webhook';
+                            }
+
+                            // Apply Prism highlighting
+                            newItem.querySelectorAll('pre code').forEach(formatAndHighlight);
+
+                            // Remove the sse-new class after animation
+                            setTimeout(() => {
+                                newItem.classList.remove('sse-new');
+                                const badge = newItem.querySelector('.new-badge');
+                                if (badge) badge.remove();
+                            }, 5000);
+                        }
+
+                        // Update displayed log count
+                        const webhookItems = document.querySelectorAll('.webhook-item');
+                        const logCount = document.querySelector('.log-count');
+                        if (logCount && webhookItems) {
+                            logCount.textContent = `Showing ${webhookItems.length} log${webhookItems.length !== 1 ? 's' : ''}`;
+                        }
+                    }, 50);
+                }
+
+                // Handle count updates from SSE
+                if (evt.detail.type === 'count') {
+                    try {
+                        const data = JSON.parse(evt.detail.data);
+                        const totalCount = document.getElementById('total-count');
+                        if (totalCount && data.total !== undefined) {
+                            totalCount.textContent = data.total;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing count event:', e);
+                    }
+                }
+            });
+
+            // Handle search input - disable SSE updates while searching
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    isSearching = this.value.trim().length > 0;
+                });
+            }
+        }
+
+        function updateSSEStatus(status) {
+            const dot = document.getElementById('sse-dot');
+            const text = document.getElementById('sse-status-text');
+
+            if (!dot || !text) return;
+
+            switch (status) {
+                case 'connected':
+                    dot.className = 'w-2 h-2 rounded-full bg-green-500';
+                    text.textContent = 'Live';
+                    break;
+                case 'error':
+                case 'disconnected':
+                    dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                    text.textContent = 'Disconnected';
+                    break;
+                default:
+                    dot.className = 'w-2 h-2 rounded-full bg-yellow-500';
+                    text.textContent = 'Connecting...';
+            }
+        }
+
+        function enablePollingFallback() {
+            const logsContainer = document.getElementById('logs-container');
+            const logs = document.getElementById('logs');
+
+            if (logsContainer) {
+                logsContainer.removeAttribute('hx-ext');
+                logsContainer.removeAttribute('sse-connect');
+            }
+
+            if (logs) {
+                logs.setAttribute('hx-trigger', 'load, every 10s');
+                htmx.process(logs);
+            }
+
+            updateSSEStatus('polling');
+            const text = document.getElementById('sse-status-text');
+            if (text) text.textContent = 'Polling (10s)';
+        }
 
         function copyWebhookUrl() {
             const url = window.location.origin + '/webhook';
@@ -459,15 +639,20 @@
 
             const searchTerm = document.querySelector('input[name="search"]')?.value;
             target.querySelectorAll('pre code').forEach((el) => {
+                let content = el.textContent;
                 try {
-                    const formatted = JSON.stringify(JSON.parse(el.textContent), null, 2);
-                    el.textContent = formatted;
-                    if (searchTerm) {
-                        el.innerHTML = highlightSearch(formatted, searchTerm);
-                    }
+                    content = JSON.stringify(JSON.parse(content), null, 2);
+                } catch (e) {
+                    // JSON parsing failed - display as-is (may be invalid JSON or plain text)
+                }
+                el.textContent = content;
+                if (searchTerm) {
+                    el.innerHTML = highlightSearch(content, searchTerm);
+                }
+                try {
                     Prism.highlightElement(el);
                 } catch (e) {
-                    console.error('Code formatting error:', e);
+                    console.error('Prism highlighting error:', e);
                 }
             });
         });
