@@ -463,16 +463,17 @@
                 try {
                     content = JSON.stringify(JSON.parse(content), null, 2);
                 } catch (e) {
-                    if (!(e instanceof SyntaxError)) {
-                        console.error('Code formatting error:', e);
-                    }
                     // JSON parsing failed - display as-is (may be invalid JSON or plain text)
                 }
                 el.textContent = content;
                 if (searchTerm) {
                     el.innerHTML = highlightSearch(content, searchTerm);
                 }
-                Prism.highlightElement(el);
+                try {
+                    Prism.highlightElement(el);
+                } catch (e) {
+                    console.error('Prism highlighting error:', e);
+                }
             });
         });
 
