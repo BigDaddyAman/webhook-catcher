@@ -182,6 +182,7 @@ The `FRONTEND_PASSWORD` environment variable protects the **web UI** from public
 - **Logs view** (`GET /logs`, `GET /logs/view`)
 - **Export logs** (`GET /export`)
 - **List webhooks** (`GET /webhooks`)
+- **SSE webhook stream** (`GET /sse/webhooks`)
 
 #### Unprotected Routes (remain open):
 - **Webhook receiver** (`POST /webhook`) - external services must be able to send webhooks

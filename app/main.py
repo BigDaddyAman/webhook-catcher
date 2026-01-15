@@ -715,9 +715,10 @@ async def sse_webhooks(request: Request, _: bool = Depends(verify_frontend_passw
     SSE endpoint for real-time webhook notifications.
 
     Event types:
-    - 'webhook': New webhook received (contains rendered HTML partial)
-    - 'ping': Keep-alive heartbeat every 30 seconds
     - 'connected': Initial connection confirmation
+    - 'webhook': New webhook received (contains rendered HTML partial)
+    - 'count': Total webhook count update (sent after each new webhook)
+    - 'ping': Keep-alive heartbeat every 30 seconds
     """
 
     async def event_generator():
