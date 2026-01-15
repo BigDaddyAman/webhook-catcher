@@ -459,16 +459,20 @@
 
             const searchTerm = document.querySelector('input[name="search"]')?.value;
             target.querySelectorAll('pre code').forEach((el) => {
+                let content = el.textContent;
                 try {
-                    const formatted = JSON.stringify(JSON.parse(el.textContent), null, 2);
-                    el.textContent = formatted;
-                    if (searchTerm) {
-                        el.innerHTML = highlightSearch(formatted, searchTerm);
-                    }
-                    Prism.highlightElement(el);
+                    content = JSON.stringify(JSON.parse(content), null, 2);
                 } catch (e) {
-                    console.error('Code formatting error:', e);
+                    if (!(e instanceof SyntaxError)) {
+                        console.error('Code formatting error:', e);
+                    }
+                    // JSON parsing failed - display as-is (may be invalid JSON or plain text)
                 }
+                el.textContent = content;
+                if (searchTerm) {
+                    el.innerHTML = highlightSearch(content, searchTerm);
+                }
+                Prism.highlightElement(el);
             });
         });
 
