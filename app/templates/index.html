@@ -178,6 +178,8 @@
              hx-ext="sse"
              sse-connect="/sse/webhooks"
              sse-withcredentials="true">
+            <!-- Hidden element to receive count SSE events -->
+            <div id="sse-count-receiver" sse-swap="count" hx-swap="innerHTML" style="display:none;"></div>
             <div id="logs"
                  hx-get="/logs"
                  hx-trigger="load"
@@ -279,7 +281,7 @@
                 }
             });
 
-            // Handle new webhook items from SSE
+            // Handle SSE messages (webhook items and count updates)
             document.body.addEventListener('htmx:sseMessage', function(evt) {
                 if (evt.detail.type === 'webhook') {
                     // If user is searching, don't show new items
@@ -309,18 +311,26 @@
                             }, 5000);
                         }
 
-                        // Update log count and total count
+                        // Update displayed log count
                         const webhookItems = document.querySelectorAll('.webhook-item');
                         const logCount = document.querySelector('.log-count');
                         if (logCount && webhookItems) {
                             logCount.textContent = `Showing ${webhookItems.length} log${webhookItems.length !== 1 ? 's' : ''}`;
                         }
-                        const totalCount = document.getElementById('total-count');
-                        if (totalCount) {
-                            const current = parseInt(totalCount.textContent, 10) || 0;
-                            totalCount.textContent = current + 1;
-                        }
                     }, 50);
+                }
+
+                // Handle count updates from SSE
+                if (evt.detail.type === 'count') {
+                    try {
+                        const data = JSON.parse(evt.detail.data);
+                        const totalCount = document.getElementById('total-count');
+                        if (totalCount && data.total !== undefined) {
+                            totalCount.textContent = data.total;
+                        }
+                    } catch (e) {
+                        console.error('Error parsing count event:', e);
+                    }
                 }
             });
 
