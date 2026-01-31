@@ -1,10 +1,9 @@
-from fastapi import FastAPI, Request, HTTPException, Query, Body, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
+from fastapi import FastAPI, Request, HTTPException, Query, Depends
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
-from pathlib import Path
 import sqlite3
 import json
 import httpx
